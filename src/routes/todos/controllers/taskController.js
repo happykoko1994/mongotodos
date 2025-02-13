@@ -5,7 +5,12 @@ export const createTask = async (req, res) => {
   try {
     const { title, subtitle } = req.body;
     const task = await Task.create({ title, subtitle, completed: false });
-    res.status(201).json(task);
+
+    if (req.headers["accept"] && req.headers["accept"].includes("application/json")) {
+      res.status(201).json(task);
+    } else {
+      res.redirect("/");
+    }
   } catch (error) {
     res.status(500).json({ message: "Ошибка при создании задачи" });
   }
@@ -15,7 +20,12 @@ export const createTask = async (req, res) => {
 export const getTasks = async (req, res) => {
   try {
     const tasks = await Task.find();
-    res.json(tasks);
+
+    if (req.headers["accept"] && req.headers["accept"].includes("application/json")) {
+      res.json(tasks);
+    } else {
+      res.render("index", { tasks });
+    }
   } catch (error) {
     res.status(500).json({ message: "Ошибка при получении задач" });
   }
@@ -24,13 +34,23 @@ export const getTasks = async (req, res) => {
 // Обновить задачу по ID
 export const updateTask = async (req, res) => {
   try {
-    const { title, subtitle, completed } = req.body;
+    const { title, subtitle } = req.body;
+    const completed = req.body.completed === "true";
     const task = await Task.findByIdAndUpdate(
       req.params.id,
       { title, subtitle, completed },
       { new: true }
     );
-    res.json(task);
+
+    if (!task) {
+      return res.status(404).json({ message: "Задача не найдена" });
+    }
+
+    if (req.headers["accept"] && req.headers["accept"].includes("application/json")) {
+      res.json(task);
+    } else {
+      res.redirect("/");
+    }
   } catch (error) {
     res.status(500).json({ message: "Ошибка при обновлении задачи" });
   }
@@ -39,8 +59,16 @@ export const updateTask = async (req, res) => {
 // Удалить задачу по ID
 export const deleteTask = async (req, res) => {
   try {
-    await Task.findByIdAndDelete(req.params.id);
-    res.json({ message: "Задача удалена" });
+    const task = await Task.findByIdAndDelete(req.params.id);
+    if (!task) {
+      return res.status(404).json({ message: "Задача не найдена" });
+    }
+
+    if (req.headers["accept"] && req.headers["accept"].includes("application/json")) {
+      res.json({ message: "Задача удалена", task });
+    } else {
+      res.redirect("/");
+    }
   } catch (error) {
     res.status(500).json({ message: "Ошибка при удалении задачи" });
   }
